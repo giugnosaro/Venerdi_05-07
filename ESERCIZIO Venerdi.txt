@@ -1,0 +1,148 @@
+CREATE TABLE [dbo].[ANAGRAFICA]
+(
+	[idanagrafica] INT NOT NULL PRIMARY KEY identity, 
+    [Cognome] NVARCHAR(50) NOT NULL, 
+    [Nome] NVARCHAR(50) NOT NULL, 
+    [Indirizzo] NVARCHAR(50) NOT NULL, 
+    [Città] NVARCHAR(50) NOT NULL, 
+    [CAP] INT NOT NULL, 
+    [Cod_Fisc] NVARCHAR(50) NOT NULL
+)
+
+CREATE TABLE [dbo].[TIPO VIOLAZIONE]
+(
+	[idviolazione] INT NOT NULL PRIMARY KEY identity, 
+    [descrizione] NVARCHAR(50) NOT NULL, 
+
+)
+
+CREATE TABLE [dbo].[VERBALE]
+(
+	[idverbale] INT NOT NULL PRIMARY KEY identity, 
+    [DataViolazione] DATETIME2 NOT NULL, 
+    [IndirizzoViolazione] NVARCHAR(50) NOT NULL, 
+    [Nominativo_Agente] NVARCHAR(50) NOT NULL, 
+    [DataTrascrizioneVerbale] DATETIME2 NOT NULL, 
+    [Importo] DECIMAL NOT NULL, 
+    [DecurtamentoPunti] INT NOT NULL, 
+    [idviolazione_FK] INT NOT NULL,
+    [idanagrafica_FK]  INT NOT NULL,
+    CONSTRAINT [FK_VERBALE_TIPO VIOLAZIONE] FOREIGN KEY ([idviolazione_FK]) REFERENCES [TIPO VIOLAZIONE]([idviolazione]),
+    CONSTRAINT [FK_VERBALE_ANAGRAFICA] FOREIGN KEY ([idanagrafica_FK]) REFERENCES [ANAGRAFICA]([idanagrafica])
+  
+)
+
+insert into [dbo].[ANAGRAFICA] (Cognome , Nome , Indirizzo , Città , CAP , Cod_Fisc) 
+values
+('Rossi', 'Mario', 'Via Roma 1', 'Roma', 00100, 'RSSMRA01A01H501A'),
+('Ricciardi', 'Franco', 'Via Napoli' , 'Napoli', 00120, 'ASERRA01A01H501A'),
+('Verdi', 'Luca', 'Via Milano 3', 'Milano', 00130, 'VRLC01A01H501A'),
+('Gialli', 'Giuseppe', 'Via Torino 5', 'Torino', 00150, 'GLGP01A01H501A'),
+('Bianchi', 'Paolo', 'Via Firenze 7', 'Firenze', 00160, 'BNCPL01A01H501A'),
+('Neri', 'Giovanni', 'Via Venezia 9', 'Venezia', 00170, 'NRGNN01A01H501A')
+
+insert into [dbo].[TIPO VIOLAZIONE] (descrizione)
+values
+('Eccesso di velocità'),
+('Guida senza cintura'),
+('Guida senza patente'),
+('Guida in stato di ebbrezza'),
+('Guida con cellulare'),
+('Guida senza assicurazione'),
+('Guida senza revisione'),
+('Guida senza casco'),
+('Guida senza occhiali'),
+('Guida senza catene'),
+('Guida senza gomme da neve')
+
+insert into [dbo].[VERBALE] (DataViolazione , IndirizzoViolazione , Nominativo_Agente , DataTrascrizioneVerbale , Importo , DecurtamentoPunti)
+values
+('2020-01-01 10:00:00', 'Via Roma 1', 'Mario Rossi', '2020-01-01 10:30:00', 100.00, 5),
+('2020-01-02 11:00:00', 'Via Napoli', 'Franco Ricciardi', '2020-01-02 11:30:00', 200.00, 10),
+('2020-01-03 12:00:00', 'Via Milano 3', 'Luca Verdi', '2020-01-03 12:30:00', 300.00, 15),
+('2020-01-04 13:00:00', 'Via Torino 5', 'Giuseppe Gialli', '2020-01-04 13:30:00', 400.00, 20),
+('2020-01-05 14:00:00', 'Via Firenze 7', 'Paolo Bianchi', '2020-01-05 14:30:00', 500.00, 25),
+('2020-01-06 15:00:00', 'Via Venezia 9', 'Giovanni Neri', '2020-01-06 15:30:00', 600.00, 30)
+
+-- Conteggio dei verbali trascritti, 
+
+select
+count (distinct VERBALE.IDVERBALE) as "Numero di verbali"
+from VERBALE 
+
+--Conteggio dei verbali trascritti raggruppati per anagrafe, 
+
+select 
+ANAGRAFICA.Cod_Fisc as "Codice Fiscale",
+count (distinct VERBALE.IDVERBALE) as "Numero di verbali"
+from VERBALE
+join ANAGRAFICA on VERBALE.idverbale = ANAGRAFICA.idanagrafica
+group by ANAGRAFICA.Cod_Fisc
+
+-- Conteggio dei verbali trascritti raggruppati per tipo di violazione, 
+
+select 
+[TIPO VIOLAZIONE].descrizione as "Tipo di violazione",
+count (distinct VERBALE.IDVERBALE) as "Numero di verbali"
+from VERBALE
+join [TIPO VIOLAZIONE] on VERBALE.idverbale = [TIPO VIOLAZIONE].idviolazione
+group by [TIPO VIOLAZIONE].descrizione
+
+-- Totale dei punti decurtati per ogni anagrafe, 
+select a.Nome, a.Cognome,
+SUM (v.DecurtamentoPunti) as "Punti decurtati"
+from VERBALE as v 
+join ANAGRAFICA as a on v.idanagrafica_FK = a.idanagrafica
+group by a.Nome, a.Cognome
+
+--Cognome, Nome, Data violazione, Indirizzo violazione, importo e punti decurtati per tutti gli anagrafici residenti a Palermo,
+select a.Nome , a.Cognome, v.DataViolazione, v.IndirizzoViolazione, v.Importo, v.DecurtamentoPunti
+from VERBALE as v 
+join ANAGRAFICA as a on v.idanagrafica_FK = a.idanagrafica
+where a.Città = 'Palermo'
+
+-- Cognome, Nome, Indirizzo, Data violazione, importo e punti decurtati per le violazioni fatte tra il febbraio 2009 e luglio 2009,
+select  a.Nome , a.Cognome, v.DataViolazione,  v.Importo, v.DecurtamentoPunti , a.indirizzo
+from VERBALE as v
+join ANAGRAFICA as a on v.idanagrafica_FK = a.idanagrafica
+where v.DataViolazione between '2009-02-01' and '2009-07-31'
+
+-- Totale degli importi per ogni anagrafico, 
+select a.Nome, a.Cognome,
+SUM (v.Importo) as ImportoTotale
+from VERBALE as v 
+join ANAGRAFICA as a on v.idanagrafica_FK = a.idanagrafica
+group by a.Nome, a.Cognome
+
+--Visualizzazione di tutti gli anagrafici residenti a Palermo, 
+select
+* 
+from ANAGRAFICA
+where Città = 'Palermo'
+
+--Query che visualizzi Data violazione, Importo e decurta mento punti relativi ad una certa data, 
+ select v.DataViolazione, v.Importo, v.DecurtamentoPunti
+ from VERBALE as v
+ where v.DataViolazione = '2020-01-01 10:00:00'
+
+ --Conteggio delle violazioni contestate raggruppate per Nominativo dell’agente di Polizia, 
+
+ select v.Nominativo_Agente,
+ count (*) as "Numero di violazioni"
+ from VERBALE as v 
+ group by v.Nominativo_Agente
+
+ -- Cognome, Nome, Indirizzo, Data violazione, Importo e punti decurtati per tutte le violazioni che superino il decurtamento di 5 punti,
+ select a.Nome , a.Cognome, a.Indirizzo, v.DataViolazione, v.Importo, v.DecurtamentoPunti
+ from VERBALE as v
+ join ANAGRAFICA as a on v.idanagrafica_FK = a.idanagrafica
+ where v.DecurtamentoPunti > 5
+
+ --  Cognome, Nome, Indirizzo, Data violazione, Importo e punti decurtati per tutte le violazioni che superino l’importo di 400 euro
+
+ select a.Nome , a.Cognome, a.Indirizzo, v.DataViolazione, v.Importo, v.DecurtamentoPunti
+ from VERBALE as v
+ join ANAGRAFICA as a on v.idanagrafica_FK = a.idanagrafica
+ where v.Importo > 400
+
+
